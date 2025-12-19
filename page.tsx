@@ -1,106 +1,66 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
+import { useAuth } from '@/context/AuthContext';
+import { Button } from '@/components/ui/button';
 import api from '@/lib/api';
 import Link from 'next/link';
-import { Button } from '@/components/ui/button';
 
-interface Service {
-  id: number;
-  title: string;
-  description: string;
-  category: string;
-  price: number;
-  location: string;
-}
+export default function LoginPage() {
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const { login } = useAuth();
 
-export default function Home() {
-  const [services, setServices] = useState<Service[]>([]);
-  const [search, setSearch] = useState('');
-  const [category, setCategory] = useState('');
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setError('');
+        try {
+            const formData = new FormData();
+            formData.append('username', email);
+            formData.append('password', password);
 
-  useEffect(() => {
-    fetchServices();
-  }, []);
+            const res = await api.post('/auth/token', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' } // OAuth2RequestForm expects form data
+            });
+            login(res.data.access_token);
+        } catch (err: any) {
+            setError(err.response?.data?.detail || 'Login failed');
+        }
+    };
 
-  const fetchServices = async () => {
-    try {
-      let url = '/services/';
-      const params = new URLSearchParams();
-      if (search) params.append('search', search);
-      if (category) params.append('category', category);
-
-      const res = await api.get(url, { params });
-      setServices(res.data);
-    } catch (error) {
-      console.error("Failed to fetch services", error);
-    }
-  };
-
-  const handleSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    fetchServices();
-  };
-
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <section className="mb-12 text-center">
-        <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl mb-4">
-          Find Trusted Local Services
-        </h1>
-        <p className="text-xl text-gray-500 mb-8">
-          From plumbing to cleaning, find the right professional for your needs.
-        </p>
-
-        <form onSubmit={handleSearch} className="max-w-xl mx-auto flex gap-2">
-          <input
-            type="text"
-            placeholder="Search for services..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="flex-1 p-3 border rounded-md"
-          />
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-            className="p-3 border rounded-md"
-          >
-            <option value="">All Categories</option>
-            <option value="Plumbing">Plumbing</option>
-            <option value="Cleaning">Cleaning</option>
-            <option value="Electrician">Electrician</option>
-            <option value="Carpentry">Carpentry</option>
-          </select>
-          <Button type="submit" size="lg">Search</Button>
-        </form>
-      </section>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {services.length > 0 ? (
-          services.map((service) => (
-            <div key={service.id} className="border rounded-lg p-6 shadow-sm hover:shadow-md transition-shadow bg-white">
-              <div className="flex justify-between items-start mb-2">
-                <span className="bg-gray-100 text-gray-800 text-xs font-semibold px-2.5 py-0.5 rounded">
-                  {service.category}
-                </span>
-                <span className="font-bold text-lg">${service.price}</span>
-              </div>
-              <h3 className="text-xl font-bold mb-2">{service.title}</h3>
-              <p className="text-gray-600 mb-4 line-clamp-2">{service.description}</p>
-              <div className="flex items-center text-sm text-gray-500 mb-4">
-                <span>📍 {service.location}</span>
-              </div>
-              <Link href={`/services/${service.id}`}>
-                <Button className="w-full">View Details</Button>
-              </Link>
+    return (
+        <div className="flex justify-center items-center h-[calc(100vh-64px)]">
+            <div className="w-full max-w-sm p-6 bg-white rounded-lg shadow-md">
+                <h1 className="text-2xl font-bold mb-6 text-center">Login</h1>
+                {error && <p className="text-red-500 text-sm mb-4">{error}</p>}
+                <form onSubmit={handleSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Email</label>
+                        <input
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="w-full p-2 border rounded-md"
+                            required
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium mb-1">Password</label>
+                        <input
+                            type="password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            className="w-full p-2 border rounded-md"
+                            required
+                        />
+                    </div>
+                    <Button type="submit" className="w-full">Login</Button>
+                </form>
+                <p className="mt-4 text-center text-sm">
+                    Don't have an account? <Link href="/register" className="text-blue-500">Register</Link>
+                </p>
             </div>
-          ))
-        ) : (
-          <div className="col-span-full text-center text-gray-500 py-12">
-            No services found. Try adjusting your search.
-          </div>
-        )}
-      </div>
-    </div>
-  );
+        </div>
+    );
 }
